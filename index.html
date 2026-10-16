@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f7fc">
+<title>Mission Operator</title>
+<style>
+:root{
+  --bg:#f3f7fc; --panel:#ffffff; --panel2:#eef3fa; --border:#d3deec; --text:#1f2a37; --dim:#6b7a8c;
+  --blue:#1e6fd9; --blueFaint:rgba(30,111,217,0.10); --green:#14995a; --amber:#c97a00; --red:#d6304a;
+  --purple:#7b3fd1; --teal:#0b9c8f; --orange:#d46a00; --lime:#4c9a12; --yellow:#b8960a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Courier New",ui-monospace,monospace;font-size:12px;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100%}
+.top{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--border);gap:10px}
+.brand{font-weight:900;font-size:14px;letter-spacing:4px;color:var(--blue)}
+.brand span{color:var(--amber)}
+.gps{font-size:10px;color:var(--dim);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 6px var(--blue);display:inline-block}
+.score{font-weight:900;font-size:14px;color:var(--amber);white-space:nowrap}
+.tabs{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--panel2);border-bottom:1px solid var(--border);gap:6px}
+.tablist{display:flex;gap:4px;overflow-x:auto}
+.tab{font-size:10px;letter-spacing:2px;padding:5px 10px;border-radius:3px;border:1px solid transparent;color:var(--dim);cursor:pointer;white-space:nowrap;background:none;font-family:inherit}
+.tab.on{color:var(--blue);border-color:var(--blue);background:var(--blueFaint)}
+.scan{background:var(--panel);border:1px solid var(--blue);color:var(--blue);font-family:inherit;font-size:10px;letter-spacing:2px;padding:5px 12px;border-radius:3px;cursor:pointer;white-space:nowrap}
+.scan.busy{border-color:var(--amber);color:var(--amber)}
+.main{flex:1;display:grid;grid-template-columns:190px 1fr;overflow:hidden}
+.side{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.label{font-size:9px;letter-spacing:3px;color:var(--blue);padding:8px 10px;border-bottom:1px solid var(--border)}
+.sigs{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px}
+.sig{background:var(--panel2);border:1px solid var(--border);border-left:3px solid;border-radius:3px;padding:7px 9px;position:relative}
+.sig b{display:block;font-size:11px;letter-spacing:1px;color:var(--text)}
+.sig i{font-style:normal;font-size:8px}
+.sig em{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-style:normal;font-weight:700;font-size:12px}
+.session{border-top:1px solid var(--border);padding:10px}
+.row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--panel2);font-size:10px}
+.row span:first-child{color:var(--dim)}
+.row span:last-child{font-weight:700}
+.view{position:relative;overflow:hidden;background:#fbfdff}
+.pane{position:absolute;inset:0;overflow-y:auto;padding:14px;display:none}
+.pane.on{display:block}
+#mapPane{padding:0;overflow:hidden}
+#radar{position:absolute;inset:0;width:100%;height:100%}
+.hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:4px;color:var(--blue);opacity:.6}
+.acq{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--amber);font-size:11px;letter-spacing:2px}
+.acq small{display:block;font-size:8px;color:var(--dim);margin-top:4px}
+.toasts{position:absolute;top:30px;left:50%;transform:translateX(-50%);width:260px;max-width:90%;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.toast{background:var(--panel);border:1px solid;border-left:3px solid;padding:6px 12px;font-size:9px;border-radius:3px;display:flex;justify-content:space-between;box-shadow:0 2px 8px rgba(30,60,100,.12)}
+.toast span:last-child{font-weight:700;margin-left:8px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:8px}
+.card h3{font-size:11px;letter-spacing:2px;color:var(--blue);margin-bottom:6px}
+.log{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--panel2);font-size:11px}
+.log small{color:var(--dim);font-size:9px;display:block}
+.log b{color:var(--red)}
+.badge{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--panel2)}
+.medal{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--dim);flex-shrink:0}
+.badge.got .medal{border-color:var(--blue);color:var(--blue);background:var(--blueFaint)}
+.badge small{display:block;color:var(--dim);font-size:9px}
+.opt{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--panel2);gap:10px}
+select,.btn{font-family:inherit;font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:3px;background:var(--panel);color:var(--text)}
+.btn{cursor:pointer;color:var(--red);border-color:var(--red)}
+.empty{color:var(--dim);font-size:11px;padding:10px 0}
+@media (max-width:640px){
+  .main{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .side{border-right:none;border-top:1px solid var(--border);order:2;max-height:150px}
+  .sigs{flex-direction:row;overflow-x:auto;overflow-y:hidden;flex:none}
+  .sig{min-width:130px}
+  .session{display:none}
+  .gps .coords{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">MISSION <span>OPR</span></div>
+    <div class="gps"><span class="dot"></span><span id="gpsText">ACQUIRING GPS</span></div>
+    <div class="score" id="score">0 PTS</div>
+  </div>
+  <div class="tabs">
+    <div class="tablist" id="tabs"></div>
+    <button class="scan" id="scanBtn">[ SCAN ]</button>
+  </div>
+  <div class="main">
+    <div class="side">
+      <div class="label">// SIGNAL TYPES</div>
+      <div class="sigs" id="sigs"></div>
+      <div class="session">
+        <div class="label" style="padding:0 0 6px;border:none">// SESSION</div>
+        <div id="sessionRows"></div>
+      </div>
+    </div>
+    <div class="view">
+      <div class="pane on" id="mapPane">
+        <svg id="radar" viewBox="0 0 380 300" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="hint" id="hint">SCANNING</div>
+        <div class="acq" id="acq">ACQUIRING GPS<small>ALLOW LOCATION ACCESS</small></div>
+        <div class="toasts" id="toasts"></div>
+      </div>
+      <div class="pane" id="logPane"></div>
+      <div class="pane" id="badgePane"></div>
+      <div class="pane" id="setPane"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var VERSION = "v2026.10.15";
+  var C = {blue:"#1e6fd9",green:"#14995a",amber:"#c97a00",red:"#d6304a",purple:"#7b3fd1",teal:"#0b9c8f",orange:"#d46a00",lime:"#4c9a12",yellow:"#b8960a"};
+  var SIGNALS = [
+    {key:"wifi",label:"WI-FI AP",pts:"+5 TO 15 PTS",color:C.green},
+    {key:"bt",label:"BLUETOOTH",pts:"+5 TO 20 PTS",color:C.blue},
+    {key:"cell",label:"CELL TOWER",pts:"+25 PTS",color:C.amber},
+    {key:"aircraft",label:"AIRCRAFT",pts:"+30 TO 80 PTS",color:C.red},
+    {key:"train",label:"RAIL / TRAIN",pts:"+20 TO 50 PTS",color:C.purple},
+    {key:"meshtastic",label:"MESHTASTIC",pts:"+40 PTS",color:C.teal},
+    {key:"helium",label:"HELIUM NODE",pts:"+60 PTS",color:C.orange},
+    {key:"ham",label:"HAM REPEATER",pts:"+35 PTS",color:C.lime},
+    {key:"poke",label:"POKESTOP/PORTAL",pts:"+10 PTS",color:C.yellow}
+  ];
+  var TABS = ["MAP","LOGBOOK","BADGES","SETTINGS"];
+  var KEY = "mission-operator-v2026.10.15";
+
+  function load(){
+    try { var s = JSON.parse(localStorage.getItem(KEY)); if (s) return s; } catch(e){}
+    return {score:0, log:[], seen:{}, poll:20, nm:60};
+  }
+  var S = load();
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+  var loc = null, planes = [], tab = "MAP", scanning = false, timer = null, lastErr = false;
+  var $ = function(id){ return document.getElementById(id); };
+
+  // tabs
+  TABS.forEach(function(t){
+    var b = document.createElement("button");
+    b.className = "tab" + (t === tab ? " on" : "");
+    b.textContent = t;
+    b.onclick = function(){ setTab(t); };
+    $("tabs").appendChild(b);
+  });
+  function setTab(t){
+    tab = t;
+    Array.prototype.forEach.call($("tabs").children, function(b){ b.className = "tab" + (b.textContent === t ? " on" : ""); });
+    $("mapPane").className = "pane" + (t === "MAP" ? " on" : "");
+    $("logPane").className = "pane" + (t === "LOGBOOK" ? " on" : "");
+    $("badgePane").className = "pane" + (t === "BADGES" ? " on" : "");
+    $("setPane").className = "pane" + (t === "SETTINGS" ? " on" : "");
+    renderPanes();
+  }
+
+  function renderSide(){
+    $("sigs").innerHTML = SIGNALS.map(function(s){
+      var n = s.key === "aircraft" ? planes.length : 0;
+      return '<div class="sig" style="border-left-color:'+s.color+'"><b>'+s.label+'</b><i style="color:'+s.color+'">'+s.pts+'</i><em style="color:'+s.color+'">'+n+'</em></div>';
+    }).join("");
+    var rows = [
+      ["SCORE", S.score.toLocaleString(), C.amber],
+      ["AIRCRAFT", planes.length, C.red],
+      ["LOGGED", S.log.length, C.blue],
+      ["GPS", loc ? "LOCKED" : "SEARCHING", loc ? C.green : C.amber],
+      ["FEED", lastErr ? "RETRYING" : "OK", lastErr ? C.amber : C.green]
+    ];
+    $("sessionRows").innerHTML = rows.map(function(r){
+      return '<div class="row"><span>'+r[0]+'</span><span style="color:'+r[2]+'">'+r[1]+'</span></div>';
+    }).join("");
+    $("score").textContent = S.score.toLocaleString() + " PTS";
+  }
+
+  // radar
+  var cx = 190, cy = 150, R = 130, t0 = Date.now();
+  function radar(){
+    var svg = $("radar"), h = "";
+    h += '<defs><pattern id="g" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0L0 0 0 30" fill="none" stroke="rgba(30,111,217,0.08)"/></pattern></defs>';
+    h += '<rect width="380" height="300" fill="url(#g)"/>';
+    h += '<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="'+C.blue+'" stroke-width="0.6" stroke-dasharray="5,7" opacity="0.35"/>';
+    h += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(R/2)+'" fill="none" stroke="'+C.blue+'" stroke-width="0.6" stroke-dasharray="3,5" opacity="0.25"/>';
+    for (var k = 0; k < 3; k++){
+      var e = ((Date.now() - t0 + k * 1000) % 3000) / 3000;
+      h += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(20 + e * 150)+'" fill="none" stroke="'+C.blue+'" opacity="'+(0.6 * (1 - e))+'"/>';
+    }
+    if (loc){
+      var degR = S.nm / 60, cosL = Math.cos(loc.lat * Math.PI / 180);
+      planes.forEach(function(p){
+        var x = cx + (p.lon - loc.lon) * cosL / degR * R;
+        var y = cy - (p.lat - loc.lat) / degR * R;
+        if (x < 0 || x > 380 || y < 0 || y > 300) return;
+        h += '<g transform="rotate('+(p.heading||0)+','+x+','+y+')"><polygon points="'+x+','+(y-8)+' '+(x+5)+','+(y+5)+' '+x+','+(y+2)+' '+(x-5)+','+(y+5)+'" fill="'+C.red+'"/></g>';
+        h += '<text x="'+(x+8)+'" y="'+(y+3)+'" fill="'+C.red+'" font-size="6" font-family="monospace">'+esc(p.callsign)+'</text>';
+      });
+    }
+    h += '<circle cx="'+cx+'" cy="'+cy+'" r="10" fill="none" stroke="'+C.amber+'" stroke-width="2"/><circle cx="'+cx+'" cy="'+cy+'" r="3" fill="'+C.amber+'"/>';
+    h += '<line x1="'+cx+'" y1="'+(cy-10)+'" x2="'+cx+'" y2="'+(cy-14)+'" stroke="'+C.amber+'" stroke-width="1.5"/><line x1="'+cx+'" y1="'+(cy+10)+'" x2="'+cx+'" y2="'+(cy+14)+'" stroke="'+C.amber+'" stroke-width="1.5"/>';
+    h += '<line x1="'+(cx-10)+'" y1="'+cy+'" x2="'+(cx-14)+'" y2="'+cy+'" stroke="'+C.amber+'" stroke-width="1.5"/><line x1="'+(cx+10)+'" y1="'+cy+'" x2="'+(cx+14)+'" y2="'+cy+'" stroke="'+C.amber+'" stroke-width="1.5"/>';
+    svg.innerHTML = h;
+    requestAnimationFrame(radar);
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  function toast(msg, pts, color){
+    var d = document.createElement("div");
+    d.className = "toast";
+    d.style.borderColor = color;
+    d.innerHTML = '<span>'+esc(msg)+'</span><span style="color:'+color+'">'+pts+' PTS</span>';
+    $("toasts").appendChild(d);
+    setTimeout(function(){ d.remove(); }, 3200);
+  }
+
+  function award(p){
+    if (S.seen[p.icao]) return;
+    var pts = p.alt > 30000 ? 30 : p.alt > 10000 ? 55 : 80;
+    S.seen[p.icao] = 1;
+    S.score += pts;
+    S.log.unshift({icao:p.icao, callsign:p.callsign, alt:p.alt, type:p.type, pts:pts, t:Date.now()});
+    if (S.log.length > 300) S.log.length = 300;
+    toast("AIRCRAFT " + p.callsign, "+" + pts, C.red);
+  }
+
+  function fetchAircraft(){
+    if (!loc) return Promise.resolve();
+    var url = "/api/aircraft?lat=" + loc.lat.toFixed(3) + "&lon=" + loc.lon.toFixed(3) + "&nm=" + S.nm;
+    return fetch(url).then(function(r){ return r.json(); }).then(function(d){
+      lastErr = !d.aircraft || !!d.error;
+      planes = (d.aircraft || []).filter(function(p){ return p.icao; });
+      planes.forEach(award);
+      save(); renderSide(); renderPanes();
+    }).catch(function(){ lastErr = true; renderSide(); });
+  }
+
+  function startPolling(){
+    if (timer) clearInterval(timer);
+    timer = setInterval(function(){ if (!document.hidden) fetchAircraft(); }, S.poll * 1000);
+  }
+
+  $("scanBtn").onclick = function(){
+    if (scanning) return;
+    scanning = true;
+    var b = $("scanBtn");
+    b.className = "scan busy"; b.textContent = "SCANNING...";
+    Promise.all([fetchAircraft(), new Promise(function(r){ setTimeout(r, 1800); })]).then(function(){
+      scanning = false; b.className = "scan"; b.textContent = "[ SCAN ]";
+    });
+  };
+
+  var BADGES = [
+    {id:"first", name:"FIRST CONTACT", desc:"Log your first aircraft", test:function(){ return S.log.length >= 1; }},
+    {id:"ten", name:"SPOTTER", desc:"Log ten aircraft", test:function(){ return S.log.length >= 10; }},
+    {id:"fifty", name:"TOWER WATCH", desc:"Log fifty aircraft", test:function(){ return S.log.length >= 50; }},
+    {id:"hundred", name:"AIR TRAFFIC", desc:"Log one hundred aircraft", test:function(){ return S.log.length >= 100; }},
+    {id:"low", name:"LOW PASS", desc:"Log an aircraft under three thousand feet", test:function(){ return S.log.some(function(l){ return l.alt > 0 && l.alt < 3000; }); }},
+    {id:"ground", name:"RAMP RAT", desc:"Log an aircraft on the ground", test:function(){ return S.log.some(function(l){ return l.alt === 0; }); }},
+    {id:"night", name:"NIGHT SHIFT", desc:"Log an aircraft between midnight and five", test:function(){ return S.log.some(function(l){ return new Date(l.t).getHours() < 5; }); }},
+    {id:"score", name:"FIVE GRAND", desc:"Reach five thousand points", test:function(){ return S.score >= 5000; }}
+  ];
+
+  function renderPanes(){
+    if (tab === "LOGBOOK"){
+      var h = '<div class="card"><h3>// LOGBOOK</h3>';
+      if (!S.log.length) h += '<div class="empty">Nothing logged yet. Aircraft land here the first time they enter your scan range.</div>';
+      S.log.slice(0, 150).forEach(function(l){
+        var d = new Date(l.t);
+        h += '<div class="log"><div><b>'+esc(l.callsign)+'</b> '+esc(l.type||"")+'<small>'+d.toLocaleDateString()+' '+d.toLocaleTimeString()+' &middot; '+(l.alt === 0 ? "GROUND" : l.alt.toLocaleString()+" FT")+'</small></div><div style="color:'+C.amber+';font-weight:700">+'+l.pts+'</div></div>';
+      });
+      $("logPane").innerHTML = h + '</div>';
+    }
+    if (tab === "BADGES"){
+      var b = '<div class="card"><h3>// BADGES</h3>';
+      BADGES.forEach(function(x){
+        var got = x.test();
+        b += '<div class="badge'+(got?" got":"")+'"><div class="medal">'+(got?"&#9733;":"?")+'</div><div><b>'+x.name+'</b><small>'+x.desc+'</small></div></div>';
+      });
+      $("badgePane").innerHTML = b + '</div>';
+    }
+    if (tab === "SETTINGS"){
+      var o = '<div class="card"><h3>// SETTINGS</h3>';
+      o += '<div class="opt"><span>SCAN INTERVAL</span><select id="pollSel">'+[15,20,30,60].map(function(v){ return '<option value="'+v+'"'+(S.poll===v?" selected":"")+'>'+v+' SEC</option>'; }).join("")+'</select></div>';
+      o += '<div class="opt"><span>SCAN RANGE</span><select id="nmSel">'+[25,60,120].map(function(v){ return '<option value="'+v+'"'+(S.nm===v?" selected":"")+'>'+v+' NM</option>'; }).join("")+'</select></div>';
+      o += '<div class="opt"><span>WIPE LOGBOOK AND SCORE</span><button class="btn" id="wipeBtn">WIPE</button></div>';
+      o += '<div class="opt"><span>BUILD</span><span style="color:'+C.blue+'">'+VERSION+'</span></div></div>';
+      $("setPane").innerHTML = o;
+      $("pollSel").onchange = function(){ S.poll = parseInt(this.value, 10); save(); startPolling(); };
+      $("nmSel").onchange = function(){ S.nm = parseInt(this.value, 10); save(); fetchAircraft(); };
+      $("wipeBtn").onclick = function(){
+        if (!confirm("Wipe the logbook and score?")) return;
+        S.score = 0; S.log = []; S.seen = {}; save(); renderSide(); renderPanes();
+      };
+    }
+  }
+
+  if (navigator.geolocation){
+    navigator.geolocation.watchPosition(function(pos){
+      var first = !loc;
+      loc = {lat:pos.coords.latitude, lon:pos.coords.longitude};
+      $("gpsText").innerHTML = '<span style="color:'+C.green+'">LIVE</span><span class="coords">&nbsp;'+loc.lat.toFixed(4)+'&deg; '+loc.lon.toFixed(4)+'&deg;</span>';
+      $("acq").style.display = "none";
+      renderSide();
+      if (first) fetchAircraft();
+    }, function(){}, {enableHighAccuracy:true});
+  }
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) fetchAircraft(); });
+
+  renderSide();
+  startPolling();
+  radar();
+})();
+</script>
+</body>
+</html>
